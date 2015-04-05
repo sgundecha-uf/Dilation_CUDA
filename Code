@@ -34,7 +34,7 @@ int main()
 	Npp8u * d_o;	   
 
 	cudaEvent_t start,stop;
-	long double elapsedTime;<br>
+	long double elapsedTime;
 
 	//CREATING EVENTS
 	cudaEventCreate(&start);
@@ -43,7 +43,7 @@ int main()
 	long double sum[15];
 	int count = 0;
 
-	for(int m = 0; m < 32767; m++)
+	for(int m = 0; m < 32769; m=m*2)
 	{
 		sum[count] = 0;	
 		
