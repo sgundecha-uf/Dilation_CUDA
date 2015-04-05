@@ -1,7 +1,7 @@
 //Group no : 6
 //Contact email : sgundecha@ufl.edu
 
-//Data precision(input and output) : 8 - bt unsigned array with binary values
+//Data precision(input and output) : 8 - bit unsigned array with binary values
 //Data size range : from 2x2 matrix to 2^15x2^15
 
 //Description of code : Implementing Image processing Dilate kernel using Nvidia NPP library. The kernel size is 3x3.
