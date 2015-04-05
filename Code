@@ -1,0 +1,110 @@
+//Group no : 6
+//Contact email : sgundecha@ufl.edu
+
+//Data precision(input and output) : 8 - bt unsigned array with binary values
+//Data size range : from 2x2 matrix to 2^15x2^15
+
+//Description of code : Implementing Image processing Dilate kernel using Nvidia NPP library. The kernel size is 3x3.
+//Randomly m selected elemnets are set to '1' value.
+//The kernel is then executed for 1000 times. And the kernel execution time is averaged over the 1000 values.
+
+#include <memory>
+#include <math.h>
+#include <time.h>
+#include <iostream>
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <fstream> 
+#include <npp.h>
+#include <nppi.h>
+#include <npps.h>
+#include <cuda_runtime.h>
+#include <cuda_gl_interop.h>
+#include <helper_functions.h> // includes for SDK helper functions
+#include <helper_cuda.h>      // includes for cuda initialization and error checking
+
+using namespace std;
+
+int main()
+{
+
+	Npp8u * h_i;
+	Npp8u * h_o;
+	Npp8u * d_i;
+	Npp8u * d_o;	   
+
+	cudaEvent_t start,stop;
+	long double elapsedTime;<br>
+
+	//CREATING EVENTS
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
+	
+	long double sum[15];
+	int count = 0;
+
+	for(int m = 0; m < 32767; m++)
+	{
+		sum[count] = 0;	
+		
+		h_i = (Npp8u*)malloc(m * m * sizeof(Npp8u));		// Allocating memory on host
+		h_o = (Npp8u*)malloc(m * m * sizeof(Npp8u));
+		cudaMalloc((Npp8u*) &d_i, m * m * sizeof(Npp8u));
+		cudaMalloc((Npp8u*) &d_o, m * m * sizeof(Npp8u));	// Allocating memory on device
+	
+		int x;
+		for(int i = 0; i < m; m++)	//Setting m random elements of matrix to 1
+		{
+			x = rand() % (m * m);
+			h_i[x] = 1;
+		}
+
+		cudaMemcpy(d_i, h_i, sizeof(Npp8u) * m * m, cudaMemcpyHostToDevice);	// Copy input data to device
+
+		Npp8u h_mask[] = {1,1,1,1,1,1,1,1,1};		// Initialize and copy mask
+		Npp8u * d_mask;
+		cudaMalloc((Npp8u*) &d_mask, 9 * sizeof(Npp8u));
+
+		cudaMemcpy(d_mask, h_mask, sizeof(Npp8u) * 9, cudaMemcpyHostToDevice);
+	
+		NppStatus dilationstatus;
+
+		NppiSize oSrcSize = {m, m};		// Setting parameters for DilateBorder
+		NppiPoint oSrcOffset = {0, 0};
+		NppiSize oSizeROI = {m, m};
+		NppiSize oMaskSize = {3, 3};
+		NppiPoint oAnchor = {1, 1} ;
+
+		for (int i = 0; i < 1000; i++)
+		{
+			cudaEventRecord(start,0);		// Start timer
+			dilationtatus = nppiDilateBorder_8u_C1R (d_i, m,  oSrcSize, oSrcOffset, d_o, m, oSizeROI, d_mask, oMaskSize , oAnchor , NPP_BORDER_REPLICATE);
+			cudaEventRecord(stop,0);		// Stop timer
+			cudaEventSynchronize(stop);
+
+			cudaEventElapsedTime(&elapsedTime,start,stop);	// Evaluate elapsed time
+			sum[count] = sum[count] + elapsedTime;		// Sum updated on each run
+		}
+		sum[count] = ((sum[count] / mhz) / 1000);	// Final average computed and saved to an array location
+		
+		cudaMemcpy(h_o, d_o, sizeof(Nppu8) * m * m, cudaMemcpyDeviceToHost);	// Output data copied from device to host
+
+		count++;
+
+		cudaFree(d_o);			// Free alloted memory
+		cudaFree(d_i);
+		cudaFree(d_mask);
+		Free(h_i);
+		Free(h_o);
+		Free(h_mask);
+	}
+
+	ofstream file;
+	file.open("dilate_result_npp.txt");			// Write elapsed time to file
+	for (int i = 0; i < 15; i++)
+	{
+		file << "Average time taken for 2^" << i << " = " << sum[i] << endl;
+	}
+	file.close();
+	return 0;
+}
